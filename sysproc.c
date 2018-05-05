@@ -95,11 +95,6 @@ sys_date(void)
 {
 	char *ptr;
 	argptr(0, &ptr, sizeof(struct rtcdate*));
-	((struct rtcdate*) ptr)->second = 23;
-	((struct rtcdate*) ptr)->minute = 15;
-	((struct rtcdate*) ptr)->hour = 14;
-	((struct rtcdate*) ptr)->day = 5;
-	((struct rtcdate*) ptr)->month = 4;
-	((struct rtcdate*) ptr)->year = 2018;
+	cmostime((struct rtcdate*) ptr);
 	return 0;
 }
