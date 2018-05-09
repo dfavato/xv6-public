@@ -162,6 +162,7 @@ UPROGS=\
 	_cat\
 	_date\
 	_addr_translate\
+	_corretor\
 	_echo\
 	_forktest\
 	_grep\

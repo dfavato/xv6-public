@@ -108,7 +108,19 @@ sys_virt2real(void)
 	pte_t *pa = curproc->pgdir;
 
 	argptr(0, &va, sizeof(char*));
-	pa = walkpgdir(curproc->pgdir, va, 1);
+	pa = walkpgdir(curproc->pgdir, va, 0);
 
 	return (char*) *pa;
+}
+
+int
+sys_forkcow(void)
+{
+  return fork();
+}
+
+int
+sys_num_pages(void)
+{
+	return 0;
 }
