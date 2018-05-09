@@ -116,11 +116,25 @@ sys_virt2real(void)
 int
 sys_forkcow(void)
 {
-  return fork();
+  return forkcow();
 }
 
 int
 sys_num_pages(void)
 {
-	return 0;
+	pte_t *pte;
+	int pages_total = 0;
+	uint i;
+	struct proc *curproc = myproc();
+
+	for(i = 0; i < curproc->sz; i += PGSIZE) {
+		if((pte = walkpgdir(curproc->pgdir, (void *)i, 0)) != 0) {
+			// a page table entry existe
+			if(*pte & PTE_P) {
+				// a página está presente
+				pages_total++;
+			}
+		}
+	}
+	return pages_total;
 }
