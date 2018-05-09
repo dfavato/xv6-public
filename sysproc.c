@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "vm.h"
 
 int
 sys_fork(void)
@@ -97,4 +98,17 @@ sys_date(void)
 	argptr(0, &ptr, sizeof(struct rtcdate*));
 	cmostime((struct rtcdate*) ptr);
 	return 0;
+}
+
+char*
+sys_virt2real(void)
+{
+	char *va;
+	struct proc *curproc = myproc();
+	pte_t *pa = curproc->pgdir;
+
+	argptr(0, &va, sizeof(char*));
+	pa = walkpgdir(curproc->pgdir, va, 1);
+
+	return (char*) *pa;
 }
