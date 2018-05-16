@@ -108,7 +108,7 @@ sys_virt2real(void)
 	pte_t *pa = curproc->pgdir;
 
 	argptr(0, &va, sizeof(char*));
-	pa = walkpgdir(curproc->pgdir, va, 0);
+	pa = walkpgdir(pa, va, 0);
 
 	return (char*) *pa;
 }
