@@ -402,9 +402,8 @@ copyuvmcow(pde_t *pgdir, uint sz)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
       panic("copyuvm: page not present");
-    *pte = (*pte | PTE_COW) & ~PTE_W;
     pa = PTE_ADDR(*pte);
-    flags = PTE_FLAGS(*pte);
+    flags = PTE_FLAGS((*pte | PTE_COW) & ~PTE_W);
 
     // ao invés de mapear a página para
     // novo mem = kalloc, a página é
@@ -415,7 +414,7 @@ copyuvmcow(pde_t *pgdir, uint sz)
   }
   lcr3(V2P(pgdir));
   return d;
-
+  
 bad:
   freevm(d);
   lcr3(V2P(pgdir));
@@ -424,35 +423,31 @@ bad:
 
 void pagefault(uint err_code) {
 	uint va = rcr2();
-	pte_t *pte;
 	struct proc *curproc = myproc();
+	pte_t *pte = walkpgdir(curproc->pgdir, (void*)va, 0);
 	char *mem;
-	uint pa, flags;
+	uint pa = PTE_ADDR(*pte); 
+	uint flags = PTE_FLAGS(*pte);
 
-	cprintf("Page fault\n");
-
-	if (err_code & 0x2) {
+	if (err_code & 0x02) {
 		// erro de escrita
-		pte = walkpgdir(curproc->pgdir, (void*)va, 0);
-		cprintf("Erro de escrita.\n");
 		if (*pte & PTE_COW) {
-			cprintf("Copiando página.\n");
 			// página copy on write
-			pa = PTE_ADDR(*pte);
-			flags = PTE_FLAGS(*pte);
 			flags = (flags & ~PTE_COW) | PTE_W;
 			if((mem = kalloc()) == 0)
 				goto bad;
 			memmove(mem, (char*)P2V(pa), PGSIZE);
-			*pte = V2P(mem) | flags | PTE_P;
-
+			*pte = V2P(mem) | flags;
 		}
+	} else {
+		goto bad;
 	}
 	lcr3(V2P(curproc->pgdir));
 	return;
 bad:
-	cprintf("Não foi possível recuperar do pagefault, matando processo.\n");
+	cprintf("Não foi possível recuperar do pagefault, matando processo.\nErr_code: %x\n", err_code);
 	curproc->killed = 1;
+	lcr3(V2P(curproc->pgdir));
 }
 
 
