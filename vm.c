@@ -402,8 +402,11 @@ copyuvmcow(pde_t *pgdir, uint sz)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
       panic("copyuvm: page not present");
+
+    *pte |= PTE_COW;
+    *pte &= ~PTE_W;
     pa = PTE_ADDR(*pte);
-    flags = PTE_FLAGS((*pte | PTE_COW) & ~PTE_W);
+    flags = PTE_FLAGS(*pte);
 
     // ao invés de mapear a página para
     // novo mem = kalloc, a página é
@@ -411,7 +414,10 @@ copyuvmcow(pde_t *pgdir, uint sz)
     // físico pa
     if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0)
       goto bad;
+
+    chpgcount(pa, 1);
   }
+
   lcr3(V2P(pgdir));
   return d;
   
@@ -428,6 +434,7 @@ void pagefault(uint err_code) {
 	char *mem;
 	uint pa = PTE_ADDR(*pte); 
 	uint flags = PTE_FLAGS(*pte);
+	uint refcount = chpgcount(pa, 0);
 
 	if (err_code & 0x02) {
 		// erro de escrita
@@ -436,8 +443,14 @@ void pagefault(uint err_code) {
 			flags = (flags & ~PTE_COW) | PTE_W;
 			if((mem = kalloc()) == 0)
 				goto bad;
-			memmove(mem, (char*)P2V(pa), PGSIZE);
-			*pte = V2P(mem) | flags;
+			if(refcount > 1) {
+				memmove(mem, (char*)P2V(pa), PGSIZE);
+				chpgcount(pa, -1);
+				*pte = V2P(mem) | flags;
+			} else if (refcount == 1) {
+				*pte |= PTE_W;
+				*pte &= ~PTE_COW;
+			}
 		}
 	} else {
 		goto bad;
